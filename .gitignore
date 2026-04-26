@@ -3,6 +3,9 @@
 venv/
 env/
 
+#workspace 
+*.code-workspace
+
 # Python cache
 __pycache__/
 *.pyc
