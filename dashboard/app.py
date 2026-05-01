@@ -3,16 +3,11 @@ import pandas as pd
 import plotly.express as px
 import os
 
-st.markdown(
-    """
-<style>
-h1, h2, h3 {
-    font-weight: 600;
-}
-</style>
-    """, 
-unsafe_allow_html=True
-)
+def load_css():
+    with open("dashboard/style.css") as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+load_css()
 
 st.set_page_config(page_title="Retail Dashboard", layout="wide")
 
@@ -31,54 +26,73 @@ churn_rate = 0
 if "Churn" in rfm.columns:
     churn_rate = rfm["Churn"].mean()
 else:
-    churn_rate = 0    
+    churn_rate = 0
 
 
 st.title("Retail Analytics Dashboard")
 
 #Cards
-c1, c2, c3 = st.columns(3)
+c1, c2, c3 = st.columns(3, gap="large")
 
-c1.metric("Revenue", f"{total_revenue:,.0f}")
-c2.metric("Customers", total_customers)
-c3.metric("Churn Rate", f"{churn_rate:.2f}")
+with c1:
+    st.metric("Revenue", f"{total_revenue:,.0f}")
 
-st.markdown("---")
+with c2:
+    st.metric("Customers", total_customers)
+
+with c3:
+    st.metric("Churn Rate", f"{churn_rate:.2f}")
+
+st.markdown("<br><br>", unsafe_allow_html=True)
 
 
-
-# Customer Segmentation - RFM 
+# ---------------01 Customer Segmentation - RFM ----------------------
 st.header("Customer Segmentation")
 
 if "Cluster" in rfm.columns:
+    
+    rfm_sample = (
+        rfm.groupby("Cluster", group_keys=False)
+        .apply(lambda x: x.sample(min(len(x), 500)))
+    )
+    
     fig1 = px.scatter(
-        rfm,
+        rfm_sample,
         x="Recency",
         y="Monetary",
         color="Cluster",
         title="Customer Segmentation (RFM)",
         color_continuous_scale="Blues",
-        opacity=0.6
+        opacity=0.7
     )
 
-    fig1.update_traces(marker=dict(size=6))
+    fig1.update_traces(
+        marker=dict(size=7, line=dict(width=0))
+        )
 
     fig1.update_layout(
         template="plotly_dark",
         height=600,
-        xaxis_title="Recency (Days)",
-        yaxis_title="Monetary Value",
+        autosize=True,
+        margin=dict(l=40, r=40, t=50, b=40),
     )
 
-    st.plotly_chart(fig1, use_container_width=True)
+    st.plotly_chart(
+        fig1, 
+        use_container_width=True, 
+        config={
+            "displayModeBar": True,
+            "scrollZoom": False
+            }
+    )
 else:
     st.warning("Segment column not found in RFM")
 
-st.markdown("---")
+st.markdown("<br><br>", unsafe_allow_html=True)
 
 
 
-#Sales Forecast Segment
+# -----------------02 Sales Forecast Segment-------------------
 st.header("Sales Forecast")
 
 forecast = forecast.rename(columns={
@@ -101,17 +115,26 @@ if "Date" in forecast.columns and "Sales" in forecast.columns:
         title_font_size=20,
         xaxis_title="Date",
         yaxis_title="Sales",
+        autosize=True,
+        margin=dict(l=40, r=40, t=50, b=40),
         height=600
     )
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(
+        fig2, 
+        use_container_width=True, 
+        config={
+            "displayModeBar": True,
+            "scrollZoom": False
+        }
+    )
 else:
     st.warning("Check forecast column names")
 
-st.markdown("---")
+st.markdown("<br><br>", unsafe_allow_html=True)
 
 
 
-#Top Products Segment
+# ---------------------03 Top Products Segment--------------------
 st.header("Top Products")
 
 if "Description" in data.columns and "TotalPrice" in data.columns:
@@ -138,10 +161,19 @@ if "Description" in data.columns and "TotalPrice" in data.columns:
         title_font_size=20,
         xaxis_title="Revenue",
         yaxis_title="Product",
-        margin=dict(l=150),
+        #margin=dict(l=150),
+        autosize=True,
         yaxis=dict(autorange="reversed"),
+        margin=dict(l=40, r=40, t=50, b=40),
         height=600
     )
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(
+        fig3, 
+        use_container_width=True, 
+        config={
+            "displayModeBar": True,
+            "scrollZoom": False
+        }
+    )
 else:
     st.warning("Product columns missing")
