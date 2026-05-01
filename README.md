@@ -83,7 +83,7 @@ cd RetailPulse
 ### 2. Create virtual environment
 
 ```
-python3.10 -m venv venv
+python3.10 -m venv .venv
 source venv/Scripts/activate   # Windows (Git Bash)
 ```
 
