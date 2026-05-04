@@ -9,7 +9,11 @@ def load_css():
 
 load_css()
 
-st.set_page_config(page_title="Retail Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Retail Dashboard", 
+    layout="wide",
+    initial_sidebar_state="collapsed"
+    )
 
 #loading dataset
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -17,9 +21,55 @@ rfm = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "rfm_data.csv"))
 forecast = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "forecast.csv"))
 data = pd.read_csv(os.path.join(BASE_DIR, "data", "processed", "cleaned_data.csv"))
 
+st.markdown(
+    """
+    <h1 class="main-title">RETAIL ANALYTICS DASHBOARD</h1>
+    """,
+    unsafe_allow_html=True
+)
+
+#sidebar filters
+st.sidebar.title("Filters")
+
+#cluster filter
+clusters = st.sidebar.multiselect(
+    "Select Cluster",
+    options=sorted(rfm["Cluster"].unique()),
+    default=sorted(rfm["Cluster"].unique())
+)
+
+rfm_filtered = rfm[rfm["Cluster"].isin(clusters)]
+
+# Date filter
+data["InvoiceDate"] = pd.to_datetime(data["InvoiceDate"])
+
+min_date = data["InvoiceDate"].min()
+max_date = data["InvoiceDate"].max()
+
+date_range = st.sidebar.date_input(
+    "Select Date Range",
+    [min_date, max_date]
+)
+
+# Apply date filter
+filtered_data = data[
+    (data["InvoiceDate"] >= pd.to_datetime(date_range[0])) &
+    (data["InvoiceDate"] <= pd.to_datetime(date_range[1]))
+]
+
+
 #KPIs
-total_revenue = data["TotalPrice"].sum() if "TotalPrice" in data.columns else 0
-total_customers = data["Customer ID"].nunique() if "Customer ID" in data.columns else 0
+total_revenue = filtered_data["TotalPrice"].sum()
+total_customers = filtered_data["Customer ID"].nunique()
+
+#Export button
+st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+st.download_button(
+    label="Download Filtered Data",
+    data=filtered_data.to_csv(index=False),
+    file_name="filtered_data.csv",
+    mime="text/csv"
+)
 
 #churn fallback logic
 churn_rate = 0
@@ -27,9 +77,6 @@ if "Churn" in rfm.columns:
     churn_rate = rfm["Churn"].mean()
 else:
     churn_rate = 0
-
-
-st.title("Retail Analytics Dashboard")
 
 #Cards
 c1, c2, c3 = st.columns(3, gap="large")
@@ -52,16 +99,16 @@ st.header("Customer Segmentation")
 if "Cluster" in rfm.columns:
     
     rfm_sample = (
-        rfm.groupby("Cluster", group_keys=False)
-        .apply(lambda x: x.sample(min(len(x), 500)))
+        rfm_filtered.groupby("Cluster", group_keys=False)
+        .apply(lambda x: x.sample(min(len(x), 300)))
     )
     
     fig1 = px.scatter(
         rfm_sample,
         x="Recency",
         y="Monetary",
-        color="Cluster",
-        title="Customer Segmentation (RFM)",
+        color="Cluster",        
+        title="Customer Segmentation (RFM)",        
         color_continuous_scale="Blues",
         opacity=0.7
     )
@@ -88,7 +135,8 @@ if "Cluster" in rfm.columns:
 else:
     st.warning("Segment column not found in RFM")
 
-st.markdown("<br><br>", unsafe_allow_html=True)
+#st.markdown("## Customer Insights")
+st.markdown("---")
 
 
 
@@ -130,7 +178,9 @@ if "Date" in forecast.columns and "Sales" in forecast.columns:
 else:
     st.warning("Check forecast column names")
 
-st.markdown("<br><br>", unsafe_allow_html=True)
+#st.markdown("## Sales Forecast")
+st.markdown("---")
+
 
 
 
@@ -139,7 +189,7 @@ st.header("Top Products")
 
 if "Description" in data.columns and "TotalPrice" in data.columns:
     top_products = (
-        data.groupby("Description")["TotalPrice"]
+        filtered_data.groupby("Description")["TotalPrice"]
         .sum()
         .sort_values(ascending=False)
         .head(10)
@@ -177,3 +227,6 @@ if "Description" in data.columns and "TotalPrice" in data.columns:
     )
 else:
     st.warning("Product columns missing")
+    
+#st.markdown("## Top Products")
+st.markdown("---")
