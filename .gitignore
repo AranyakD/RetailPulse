@@ -1,6 +1,10 @@
 # Virtual Environment
+.venv/
 venv/
 env/
+
+#workspace 
+*.code-workspace
 
 # Python cache
 __pycache__/
